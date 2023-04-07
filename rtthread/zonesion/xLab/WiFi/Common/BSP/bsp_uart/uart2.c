@@ -64,7 +64,6 @@ void uart2_putc( char x)
 static int (*input_call)( char x) = NULL;
 void  uart2_set_input(int (*fun)( char ) )
 {
- 
   input_call = fun;
 }
 

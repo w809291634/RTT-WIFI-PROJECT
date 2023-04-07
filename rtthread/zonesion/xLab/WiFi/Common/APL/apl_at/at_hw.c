@@ -2,6 +2,7 @@
 #include <rtthread.h>
 #include <string.h>
 #include "at_hw.h"
+#include "stdio.h"
 
 struct rt_mutex at_uart_mutex;
 //邮件内容：消息来源。1--由中断发出的邮件；2--由Wifi控制台发出的邮件
@@ -21,6 +22,16 @@ static uint16_t at_uart_GetRemain(void);
 void at_uart_send(char *pdata) {
   if(rt_mutex_take(&at_uart_mutex, 1000) != RT_EOK) return;
   for(uint16_t i=0; i<strlen(pdata); i++){
+    while(USART_GetFlagStatus(AT_UART, USART_FLAG_TXE) == RESET);
+    USART_SendData(AT_UART, pdata[i]);
+  }
+  if(debug_flag & 0x02) rt_kprintf("at<--%s\n", pdata);
+  rt_mutex_release(&at_uart_mutex);
+}
+
+void at_uart_send_string(char *pdata,int length) {
+  if(rt_mutex_take(&at_uart_mutex, 1000) != RT_EOK) return;
+  for(uint16_t i=0; i<length; i++){
     while(USART_GetFlagStatus(AT_UART, USART_FLAG_TXE) == RESET);
     USART_SendData(AT_UART, pdata[i]);
   }
@@ -171,4 +182,22 @@ static void at_UART_Init(void) {
   USART_ITConfig(AT_UART, USART_IT_IDLE, ENABLE);
   USART_DMACmd(AT_UART, USART_DMAReq_Rx, ENABLE);
   USART_Cmd(AT_UART, ENABLE);
+}
+
+/* 定义printf函数 */
+int xprintf(const char *fmt, ...)
+{
+    va_list args;
+    unsigned int length;
+    static char rt_log_buf[RT_CONSOLEBUF_SIZE];
+
+		va_start(args, fmt);/* 初始化变量ap，让ap指向可变参数表里面的第一个参数 */
+    length = vsnprintf(rt_log_buf, sizeof(rt_log_buf) - 1, fmt, args);
+    if (length > RT_CONSOLEBUF_SIZE - 1)
+        length = RT_CONSOLEBUF_SIZE - 1;
+
+		va_end(args); /* 释放指针，将输入的参数 ap 置为 NULL */
+		
+    at_uart_send_string(rt_log_buf,length);
+    return length;
 }

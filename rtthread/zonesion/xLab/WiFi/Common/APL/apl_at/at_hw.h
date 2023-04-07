@@ -50,5 +50,5 @@ void at_uart_flush(uint16_t timeout_ms);
 int16_t at_uart_read(uint8_t *pdata, uint16_t length, uint16_t timeout_ms);
 void at_HW_Init(void);
 void at_uart_speed(uint32_t baudrate);
-
+int xprintf(const char *fmt, ...);
 #endif  //__AT_HW_H__
